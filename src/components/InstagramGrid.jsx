@@ -3,15 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Instagram = ({ size, className }) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
 
+import img1 from '../assets/creatives/1.webp';
+import img2 from '../assets/creatives/2.webp';
+import img3 from '../assets/creatives/3.jpeg';
+import img4 from '../assets/creatives/4.webp';
+import img6 from '../assets/creatives/6.webp';
+import img7 from '../assets/creatives/7.webp';
+import img8 from '../assets/creatives/8.webp';
+
 const MOCK_POSTS = [
-  { id: 1, image: "https://picsum.photos/400/500?random=11", link: "https://www.instagram.com/coolcane_india" },
-  { id: 2, image: "https://picsum.photos/400/500?random=12", link: "https://www.instagram.com/coolcane_india" },
-  { id: 3, image: "https://picsum.photos/400/500?random=13", link: "https://www.instagram.com/coolcane_india" },
-  { id: 4, image: "https://picsum.photos/400/500?random=14", link: "https://www.instagram.com/coolcane_india" },
-  { id: 5, image: "https://picsum.photos/400/500?random=15", link: "https://www.instagram.com/coolcane_india" },
-  { id: 6, image: "https://picsum.photos/400/500?random=16", link: "https://www.instagram.com/coolcane_india" },
-  { id: 7, image: "https://picsum.photos/400/500?random=17", link: "https://www.instagram.com/coolcane_india" },
-  { id: 8, image: "https://picsum.photos/400/500?random=18", link: "https://www.instagram.com/coolcane_india" },
+  { id: 1, image: img1, link: "https://www.instagram.com/coolcane_india" },
+  { id: 2, image: img2, link: "https://www.instagram.com/coolcane_india" },
+  { id: 3, image: img3, link: "https://www.instagram.com/coolcane_india" },
+  { id: 4, image: img4, link: "https://www.instagram.com/coolcane_india" },
+  { id: 6, image: img6, link: "https://www.instagram.com/coolcane_india" },
+  { id: 7, image: img7, link: "https://www.instagram.com/coolcane_india" },
+  { id: 8, image: img8, link: "https://www.instagram.com/coolcane_india" },
 ];
 
 const InstagramGrid = () => {
@@ -22,7 +29,7 @@ const InstagramGrid = () => {
       setDisplayPosts(current => {
         const newPosts = [...current];
         const indexToReplace = Math.floor(Math.random() * 4);
-        const availablePosts = MOCK_POSTS.filter(p => !current.find(cp => cp.id === p.id));
+        const availablePosts = MOCK_POSTS.filter(p => !current.some(cp => cp.id === p.id || cp.image === p.image));
         if (availablePosts.length > 0) {
           const randomNewPost = availablePosts[Math.floor(Math.random() * availablePosts.length)];
           newPosts[indexToReplace] = randomNewPost;
