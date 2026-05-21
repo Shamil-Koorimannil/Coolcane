@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { motion } from 'framer-motion';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -87,6 +88,19 @@ const ProductCarouselHero = () => {
         scrollTrigger: scrollConfig,
         onUpdate: render,
       });
+
+      // Fade out scroll indicator on scroll
+      gsap.to(".scroll-indicator", {
+        opacity: 0,
+        y: 25,
+        pointerEvents: "none",
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top top",
+          end: "top+=150 top",
+          scrub: true,
+        }
+      });
     }, containerRef);
     
     const handleResize = () => {
@@ -106,6 +120,29 @@ const ProductCarouselHero = () => {
   return (
     <section ref={containerRef} className="relative w-full h-screen bg-black overflow-hidden flex items-center justify-center">
       <canvas ref={canvasRef} className="absolute inset-0 z-0 w-full h-full object-cover"></canvas>
+
+      {/* Scroll Down Indicator */}
+      <div 
+        className="scroll-indicator absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-3 select-none pointer-events-none"
+      >
+        <span className="text-[10px] tracking-[0.25em] font-syne font-black text-white/60 uppercase">
+          Scroll Down
+        </span>
+        <div className="w-[26px] h-[42px] border-2 border-white/30 rounded-full flex justify-center pt-2.5 backdrop-blur-[2px]">
+          <motion.div 
+            animate={{
+              y: [0, 14, 0],
+              opacity: [1, 0.3, 1]
+            }}
+            transition={{
+              duration: 1.8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+            className="w-1.5 h-1.5 bg-accent rounded-full"
+          />
+        </div>
+      </div>
     </section>
   );
 };
