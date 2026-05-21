@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const Instagram = ({ size, className }) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
 
-import img1 from '../assets/creatives/1.webp';
-import img2 from '../assets/creatives/2.webp';
-import img3 from '../assets/creatives/3.jpeg';
-import img4 from '../assets/creatives/4.webp';
-import img6 from '../assets/creatives/6.webp';
-import img7 from '../assets/creatives/7.webp';
-import img8 from '../assets/creatives/8.webp';
+import img1 from '../assets/Creatives/1.webp';
+import img2 from '../assets/Creatives/2.webp';
+import img3 from '../assets/Creatives/3.jpeg';
+import img4 from '../assets/Creatives/4.webp';
+import img6 from '../assets/Creatives/6.webp';
+import img7 from '../assets/Creatives/7.webp';
+import img8 from '../assets/Creatives/8.webp';
 
 const MOCK_POSTS = [
   { id: 1, image: img1, link: "https://www.instagram.com/coolcane_india" },

@@ -2,15 +2,15 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 // Import flavor images
-import chilliOrange from '../assets/flavours/Chilli orange.png';
-import grape from '../assets/flavours/Grape.png';
-import guava from '../assets/flavours/Guava.png';
-import mango from '../assets/flavours/Mango .png';
-import papaya from '../assets/flavours/Papaya.png';
-import passionFruit from '../assets/flavours/Passion fruit.png';
-import pineapple from '../assets/flavours/Pineapple.png';
-import redCurrant from '../assets/flavours/Red currant.png';
-import waterMelon from '../assets/flavours/Water melon.png';
+import chilliOrange from '../assets/Flavours/Chilli orange.png';
+import grape from '../assets/Flavours/Grape.png';
+import guava from '../assets/Flavours/Guava.png';
+import mango from '../assets/Flavours/Mango .png';
+import papaya from '../assets/Flavours/Papaya.png';
+import passionFruit from '../assets/Flavours/Passion fruit.png';
+import pineapple from '../assets/Flavours/Pineapple.png';
+import redCurrant from '../assets/Flavours/Red currant.png';
+import waterMelon from '../assets/Flavours/Water melon.png';
 
 const ProductGrid = () => {
   const products = [
