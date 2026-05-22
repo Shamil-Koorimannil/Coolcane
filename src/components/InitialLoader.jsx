@@ -13,50 +13,75 @@ const InitialLoader = ({ onComplete }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
 
-    let currentProgress = 0;
-    
-    // Smooth progress simulation over ~3.5 seconds
-    const interval = setInterval(() => {
-      // Slows down as it gets closer to 100
-      const increment = currentProgress > 85 ? Math.random() * 1.5 : Math.random() * 5 + 1;
-      currentProgress += increment;
-      
-      if (currentProgress >= 100) {
-        currentProgress = 100;
-        clearInterval(interval);
-      }
-      
-      setProgress(Math.floor(currentProgress));
-      
-      if (currentProgress > 25 && currentProgress <= 50) setPhrase(phrases[1]);
-      else if (currentProgress > 50 && currentProgress <= 80) setPhrase(phrases[2]);
-      else if (currentProgress > 80) setPhrase(phrases[3]);
+    let fallbackInterval = null;
 
-      if (currentProgress === 100) {
-        // Master exit animation
-        const tl = gsap.timeline({
-          onComplete: () => {
-            document.body.style.overflow = 'auto';
-            onComplete();
-          }
-        });
-        
-        tl.to(containerRef.current, {
-          opacity: 0,
-          y: -40,
-          duration: 0.6,
-          ease: "power3.inOut"
-        })
-        .to(bgRef.current, {
-          yPercent: -100,
-          duration: 1.2,
-          ease: "expo.inOut"
-        }, "-=0.2");
-      }
-    }, 70);
+    const startFallbackProgress = () => {
+      let currentProgress = 0;
+      fallbackInterval = setInterval(() => {
+        const increment = currentProgress > 85 ? Math.random() * 1.5 : Math.random() * 5 + 1;
+        currentProgress = Math.min(currentProgress + increment, 99);
+        setProgress(Math.floor(currentProgress));
+      }, 70);
+    };
 
-    return () => clearInterval(interval);
+    const timeout = setTimeout(() => {
+      if (window.heroFramesProgress === undefined) {
+        startFallbackProgress();
+      }
+    }, 1500);
+
+    const handleProgress = (e) => {
+      clearTimeout(timeout);
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      setProgress(e.detail);
+    };
+
+    window.addEventListener('hero-frames-progress', handleProgress);
+
+    if (window.heroFramesProgress !== undefined) {
+      clearTimeout(timeout);
+      setProgress(window.heroFramesProgress);
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+      }
+      window.removeEventListener('hero-frames-progress', handleProgress);
+    };
   }, []);
+
+  useEffect(() => {
+    if (progress > 25 && progress <= 50) setPhrase(phrases[1]);
+    else if (progress > 50 && progress <= 80) setPhrase(phrases[2]);
+    else if (progress > 80 && progress < 100) setPhrase(phrases[3]);
+
+    if (progress === 100) {
+      setPhrase(phrases[3]);
+      // Master exit animation
+      const tl = gsap.timeline({
+        onComplete: () => {
+          document.body.style.overflow = 'auto';
+          onComplete();
+        }
+      });
+      
+      tl.to(containerRef.current, {
+        opacity: 0,
+        y: -40,
+        duration: 0.6,
+        ease: "power3.inOut"
+      })
+      .to(bgRef.current, {
+        yPercent: -100,
+        duration: 1.2,
+        ease: "expo.inOut"
+      }, "-=0.2");
+    }
+  }, [progress, onComplete]);
 
   return (
     <div ref={bgRef} className="fixed top-0 left-0 w-full h-full z-[9999] bg-bg flex flex-col items-center justify-center overflow-hidden">

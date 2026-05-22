@@ -43,15 +43,24 @@ const ProductCarouselHero = () => {
       }
     };
 
-    const images = [];
-    const sequence = { frame: 0 };
+    // Calculate how many frames are visible on the first screen percentage
+    const scrollRange = isMobile ? 1500 : 3000;
+    const firstScreenPercentage = Math.min(window.innerHeight / scrollRange, 1.0);
+    
+    // On mobile, the sequence snaps to [0, 0.5, 1], so the first screen sequence is 50% of the frames (304 frames)
+    // On desktop, we dynamically calculate based on viewport height, clamped between 25% and 40%
+    const landingFrameCount = Math.min(
+      isMobile 
+        ? 304 
+        : Math.max(
+            Math.ceil(frameCount * firstScreenPercentage),
+            Math.ceil(frameCount * 0.25)
+          ),
+      frameCount
+    );
 
-    // Preload images
-    for (let i = 0; i < frameCount; i++) {
-      const img = new Image();
-      img.src = currentFrame(i);
-      images.push(img);
-    }
+    const images = new Array(frameCount);
+    const sequence = { frame: 0 };
 
     const render = () => {
       const img = images[sequence.frame];
@@ -61,7 +70,45 @@ const ProductCarouselHero = () => {
       context.drawImage(img, 0, 0, canvas.width, canvas.height); 
     };
 
-    images[0].onload = render;
+    let loadedLandingCount = 0;
+    let backgroundStarted = false;
+
+    const startBackgroundLoading = () => {
+      if (backgroundStarted) return;
+      backgroundStarted = true;
+      
+      for (let i = landingFrameCount; i < frameCount; i++) {
+        if (images[i]) continue;
+        const img = new Image();
+        img.src = currentFrame(i);
+        images[i] = img;
+      }
+    };
+
+    const onLandingImageLoadOrError = (index) => {
+      loadedLandingCount++;
+      const progressPercent = Math.min(Math.round((loadedLandingCount / landingFrameCount) * 100), 100);
+      
+      window.heroFramesProgress = progressPercent;
+      window.dispatchEvent(new CustomEvent('hero-frames-progress', { detail: progressPercent }));
+      
+      if (index === 0) {
+        render();
+      }
+
+      if (progressPercent === 100) {
+        startBackgroundLoading();
+      }
+    };
+
+    // Preload landing images first
+    for (let i = 0; i < landingFrameCount; i++) {
+      const img = new Image();
+      img.onload = () => onLandingImageLoadOrError(i);
+      img.onerror = () => onLandingImageLoadOrError(i);
+      img.src = currentFrame(i);
+      images[i] = img;
+    }
 
     const ctx = gsap.context(() => {
       const scrollConfig = {
