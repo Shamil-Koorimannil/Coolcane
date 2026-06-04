@@ -8,12 +8,14 @@ import InstagramGrid from '../components/InstagramGrid';
 import ReviewSection from '../components/ReviewSection';
 import AboutBrand from '../components/AboutBrand';
 import ShopsGallery from '../components/ShopsGallery';
+import Roadmap from '../components/Roadmap';
 
 const Home = () => {
   return (
     <main>
       <ProductCarouselHero />
       <AboutBrand />
+      <Roadmap />
       <FeaturesSection />
       <GSAPScrollSection />
       <ProductGrid />

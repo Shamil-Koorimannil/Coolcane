@@ -27,7 +27,7 @@ const ProductCarouselHero = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const frameCount = isMobile ? 609 : 366;
+    const frameCount = isMobile ? 609 : 287;
     
     const currentFrame = index => {
       if (!isMobile) {
@@ -43,69 +43,133 @@ const ProductCarouselHero = () => {
       }
     };
 
-    // Calculate how many frames are visible on the first screen percentage
-    const scrollRange = isMobile ? 1500 : 3000;
-    const firstScreenPercentage = Math.min(window.innerHeight / scrollRange, 1.0);
-    
-    // On mobile, the sequence snaps to [0, 0.5, 1], so the first screen sequence is 50% of the frames (304 frames)
-    // On desktop, we dynamically calculate based on viewport height, clamped between 25% and 40%
-    const landingFrameCount = Math.min(
-      isMobile 
-        ? 304 
-        : Math.max(
-            Math.ceil(frameCount * firstScreenPercentage),
-            Math.ceil(frameCount * 0.25)
-          ),
-      frameCount
-    );
+    // Set a reasonable landing frame count to load fast, then stream the rest
+    const landingFrameCount = isMobile 
+      ? Math.min(80, frameCount) 
+      : Math.min(100, frameCount);
 
     const images = new Array(frameCount);
     const sequence = { frame: 0 };
+    const preloadingTracker = {};
 
     const render = () => {
       const img = images[sequence.frame];
-      if (!img || !img.complete) return;
+      if (!img || !img.complete) {
+        // Fallback: search for the closest loaded frame to prevent black flicker/jerkiness
+        let closestImg = null;
+        let minDiff = Infinity;
+        for (let i = 0; i < frameCount; i++) {
+          if (images[i] && images[i].complete) {
+            const diff = Math.abs(i - sequence.frame);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestImg = images[i];
+            }
+          }
+        }
+        if (closestImg) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(closestImg, 0, 0, canvas.width, canvas.height);
+        }
+        return;
+      }
       
       context.clearRect(0, 0, canvas.width, canvas.height);
       context.drawImage(img, 0, 0, canvas.width, canvas.height); 
     };
 
-    let loadedLandingCount = 0;
+    const preloadFrame = (i) => {
+      if (preloadingTracker[i]) return;
+      preloadingTracker[i] = 'loading';
+      
+      const img = new Image();
+      img.onload = () => {
+        preloadingTracker[i] = 'loaded';
+        images[i] = img;
+        if (Math.round(sequence.frame) === i) {
+          render();
+        }
+      };
+      img.onerror = () => {
+        preloadingTracker[i] = 'error';
+        console.error(`[Preload] Failed to load dynamic frame: ${i} (src: ${currentFrame(i)})`);
+      };
+      img.src = currentFrame(i);
+    };
+
+    let currentBackgroundIndex = landingFrameCount;
     let backgroundStarted = false;
 
-    const startBackgroundLoading = () => {
+    const startSequentialBackgroundLoading = () => {
       if (backgroundStarted) return;
       backgroundStarted = true;
       
-      for (let i = landingFrameCount; i < frameCount; i++) {
-        if (images[i]) continue;
+      const loadNext = () => {
+        if (currentBackgroundIndex >= frameCount) {
+          console.log("[Preload] Sequential background loading complete!");
+          return;
+        }
+        const i = currentBackgroundIndex;
+        currentBackgroundIndex++;
+        
+        if (preloadingTracker[i]) {
+          setTimeout(loadNext, 5);
+          return;
+        }
+        
+        preloadingTracker[i] = 'loading';
         const img = new Image();
+        img.onload = () => {
+          preloadingTracker[i] = 'loaded';
+          images[i] = img;
+          loadNext();
+        };
+        img.onerror = () => {
+          preloadingTracker[i] = 'error';
+          console.error(`[Preload] Failed to load background frame: ${i} (src: ${currentFrame(i)})`);
+          loadNext();
+        };
         img.src = currentFrame(i);
-        images[i] = img;
-      }
+      };
+      
+      loadNext();
     };
 
-    const onLandingImageLoadOrError = (index) => {
+    let loadedLandingCount = 0;
+    const onLandingImageLoadOrError = (index, success) => {
+      preloadingTracker[index] = success ? 'loaded' : 'error';
       loadedLandingCount++;
       const progressPercent = Math.min(Math.round((loadedLandingCount / landingFrameCount) * 100), 100);
       
       window.heroFramesProgress = progressPercent;
       window.dispatchEvent(new CustomEvent('hero-frames-progress', { detail: progressPercent }));
       
-      if (index === 0) {
+      if (index === 0 && success) {
         render();
       }
 
       if (progressPercent === 100) {
-        startBackgroundLoading();
+        console.log("[Loader] Initial landing frames 100% loaded. Starting progressive preloading.");
+        // Preload immediate next 40 frames first for buffer
+        const endRange = Math.min(frameCount - 1, landingFrameCount + 40);
+        for (let i = landingFrameCount; i <= endRange; i++) {
+          preloadFrame(i);
+        }
+        // Start background sequential stream
+        startSequentialBackgroundLoading();
       }
     };
 
     // Preload landing images first
+    console.log(`[Preload] Preloading ${landingFrameCount} landing frames out of ${frameCount}...`);
     for (let i = 0; i < landingFrameCount; i++) {
+      preloadingTracker[i] = 'loading';
       const img = new Image();
-      img.onload = () => onLandingImageLoadOrError(i);
-      img.onerror = () => onLandingImageLoadOrError(i);
+      img.onload = () => onLandingImageLoadOrError(i, true);
+      img.onerror = () => {
+        console.error(`[Preload] Failed to load landing frame: ${i} (src: ${currentFrame(i)})`);
+        onLandingImageLoadOrError(i, false);
+      };
       img.src = currentFrame(i);
       images[i] = img;
     }
@@ -117,6 +181,28 @@ const ProductCarouselHero = () => {
         end: isMobile ? "+=1500" : "+=3000",
         scrub: 0.5,
         pin: true,
+        onUpdate: (self) => {
+          const currentFrameVal = Math.round(sequence.frame);
+          const velocity = Math.abs(self.getVelocity());
+          
+          // Dynamically load more frames based on speed/velocity
+          const lookAhead = Math.max(40, Math.min(150, Math.round(velocity * 0.08)));
+          const direction = self.direction; // 1 = forward, -1 = backward
+          
+          if (direction >= 0) {
+            const start = currentFrameVal;
+            const end = Math.min(frameCount - 1, currentFrameVal + lookAhead);
+            for (let i = start; i <= end; i++) {
+              preloadFrame(i);
+            }
+          } else {
+            const start = Math.max(0, currentFrameVal - lookAhead);
+            const end = currentFrameVal;
+            for (let i = start; i <= end; i++) {
+              preloadFrame(i);
+            }
+          }
+        }
       };
 
       if (isMobile) {

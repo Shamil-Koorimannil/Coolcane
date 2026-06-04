@@ -27,14 +27,14 @@ const CookieBanner = () => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 50, opacity: 0 }}
           transition={{ type: 'spring', damping: 20 }}
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] bg-bg border border-white/10 rounded-full px-6 py-3 flex items-center space-x-6 w-[90%] max-w-sm md:max-w-md shadow-2xl"
+          className="fixed bottom-4 left-4 md:bottom-6 md:left-6 z-[90] bg-bg/95 backdrop-blur-md border border-white/10 rounded-full pl-5 pr-3 py-2 flex items-center gap-4 w-fit max-w-[calc(100%-2rem)] sm:max-w-sm md:max-w-md shadow-2xl"
         >
-          <p className="text-text-light text-sm font-medium flex-1">
-            This website uses cookies.
+          <p className="text-text-light text-xs font-semibold leading-none flex-1 truncate">
+            We use cookies.
           </p>
           <button 
             onClick={acceptCookies}
-            className="px-6 py-2 bg-accent text-bg font-bold rounded-full text-sm hover:scale-105 transition-transform"
+            className="px-4 py-1.5 bg-accent text-bg font-bold rounded-full text-xs hover:scale-105 transition-transform flex-shrink-0"
           >
             Okay
           </button>

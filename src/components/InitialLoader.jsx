@@ -12,44 +12,34 @@ const InitialLoader = ({ onComplete }) => {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    console.log("[Loader] Mounted, waiting for hero frames to load...");
 
-    let fallbackInterval = null;
-
-    const startFallbackProgress = () => {
-      let currentProgress = 0;
-      fallbackInterval = setInterval(() => {
-        const increment = currentProgress > 85 ? Math.random() * 1.5 : Math.random() * 5 + 1;
-        currentProgress = Math.min(currentProgress + increment, 99);
-        setProgress(Math.floor(currentProgress));
-      }, 70);
-    };
-
-    const timeout = setTimeout(() => {
-      if (window.heroFramesProgress === undefined) {
-        startFallbackProgress();
-      }
-    }, 1500);
+    // Safety timeout: if after 15 seconds the frames haven't loaded, let it pass
+    const safetyTimeout = setTimeout(() => {
+      console.warn("[Loader] Safety timeout reached. Forcing loader completion.");
+      setProgress(100);
+    }, 15000);
 
     const handleProgress = (e) => {
-      clearTimeout(timeout);
-      if (fallbackInterval) {
-        clearInterval(fallbackInterval);
-      }
+      console.log(`[Loader] Hero frames progress: ${e.detail}%`);
       setProgress(e.detail);
+      if (e.detail === 100) {
+        clearTimeout(safetyTimeout);
+      }
     };
 
     window.addEventListener('hero-frames-progress', handleProgress);
 
     if (window.heroFramesProgress !== undefined) {
-      clearTimeout(timeout);
+      console.log(`[Loader] Hero frames already loading/loaded: ${window.heroFramesProgress}%`);
       setProgress(window.heroFramesProgress);
+      if (window.heroFramesProgress === 100) {
+        clearTimeout(safetyTimeout);
+      }
     }
 
     return () => {
-      clearTimeout(timeout);
-      if (fallbackInterval) {
-        clearInterval(fallbackInterval);
-      }
+      clearTimeout(safetyTimeout);
       window.removeEventListener('hero-frames-progress', handleProgress);
     };
   }, []);
