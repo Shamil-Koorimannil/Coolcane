@@ -2,25 +2,25 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 // Import all flavor images (including the 10 newly added ones)
-import abc from '../assets/Flavours/ABC .png';
-import amla from '../assets/Flavours/Amla.png';
-import beetroot from '../assets/Flavours/Beetroot.png';
-import blueberry from '../assets/Flavours/Blue berry.png';
-import chilliOrange from '../assets/Flavours/Chilli orange.png';
-import chilli from '../assets/Flavours/Chilli.png';
-import cucumber from '../assets/Flavours/Cucumber.png';
-import ginger from '../assets/Flavours/Ginger.png';
-import grape from '../assets/Flavours/Grape.png';
-import guava from '../assets/Flavours/Guava.png';
-import mango from '../assets/Flavours/Mango .png';
-import mint from '../assets/Flavours/Mint.png';
-import papaya from '../assets/Flavours/Papaya.png';
-import passionFruit from '../assets/Flavours/Passion fruit.png';
-import pineapple from '../assets/Flavours/Pineapple.png';
-import redCurrant from '../assets/Flavours/Red currant.png';
-import strawberry from '../assets/Flavours/Strawberry .png';
-import waterMelon from '../assets/Flavours/Water melon.png';
-import cranberry from '../assets/Flavours/cranberry.png';
+import abc from '../assets/Flavours/ABC .webp';
+import amla from '../assets/Flavours/Amla.webp';
+import beetroot from '../assets/Flavours/Beetroot.webp';
+import blueberry from '../assets/Flavours/Blue berry.webp';
+import chilliOrange from '../assets/Flavours/Chilli orange.webp';
+import chilli from '../assets/Flavours/Chilli.webp';
+import cucumber from '../assets/Flavours/Cucumber.webp';
+import ginger from '../assets/Flavours/Ginger.webp';
+import grape from '../assets/Flavours/Grape.webp';
+import guava from '../assets/Flavours/Guava.webp';
+import mango from '../assets/Flavours/Mango .webp';
+import mint from '../assets/Flavours/Mint.webp';
+import papaya from '../assets/Flavours/Papaya.webp';
+import passionFruit from '../assets/Flavours/Passion fruit.webp';
+import pineapple from '../assets/Flavours/Pineapple.webp';
+import redCurrant from '../assets/Flavours/Red currant.webp';
+import strawberry from '../assets/Flavours/Strawberry .webp';
+import waterMelon from '../assets/Flavours/Water melon.webp';
+import cranberry from '../assets/Flavours/cranberry.webp';
 
 const ProductGrid = () => {
   const products = [

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import ashokapuramImg from '../assets/Shops/Ashokapuram.png';
-import calicutBeachImg from '../assets/Shops/Calicut beach.png';
-import malappuramImg from '../assets/Shops/Malappuram.png';
-import payyambalamImg from '../assets/Shops/Payyambalam kannur.png';
-import perinthalmannaImg from '../assets/Shops/Perinthalmanna.png';
+import ashokapuramImg from '../assets/Shops/Ashokapuram.webp';
+import calicutBeachImg from '../assets/Shops/Calicut beach.webp';
+import malappuramImg from '../assets/Shops/Malappuram.webp';
+import payyambalamImg from '../assets/Shops/Payyambalam kannur.webp';
+import perinthalmannaImg from '../assets/Shops/Perinthalmanna.webp';
 
 const shops = [
   {

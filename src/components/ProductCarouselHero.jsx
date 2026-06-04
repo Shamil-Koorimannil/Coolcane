@@ -31,14 +31,14 @@ const ProductCarouselHero = () => {
     
     const currentFrame = index => {
       if (!isMobile) {
-        return `/video-sequence/freepik_a-cinematic-highend-comme_2823566962%20(1)_${1000 + index}.jpg`;
+        return `/video-sequence/freepik_a-cinematic-highend-comme_2823566962%20(1)_${1000 + index}.webp`;
       } else {
         if (index <= 303) {
-          return `/cane-to-lemon-mob/cane to lemon - mob${String(index).padStart(3, '0')}.jpg`;
+          return `/cane-to-lemon-mob/cane to lemon - mob${String(index).padStart(3, '0')}.webp`;
         } else {
           // 304 to 608 maps to 0 to 304 in melon index
           const melonIndex = index - 304;
-          return `/lemon-to-melon-mob/Lemon to melon - mob${String(melonIndex).padStart(3, '0')}.jpg`;
+          return `/lemon-to-melon-mob/Lemon to melon - mob${String(melonIndex).padStart(3, '0')}.webp`;
         }
       }
     };
