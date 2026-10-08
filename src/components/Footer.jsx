@@ -91,6 +91,10 @@ const Footer = () => {
     };
 
     const handleKeyDown = (e) => {
+      const activeTag = document.activeElement ? document.activeElement.tagName : '';
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || (document.activeElement && document.activeElement.isContentEditable)) {
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         jump();
