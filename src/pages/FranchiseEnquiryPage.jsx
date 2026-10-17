@@ -9,7 +9,7 @@ import TextQuestion from '../components/franchise/TextQuestion';
 import PhoneQuestion from '../components/franchise/PhoneQuestion';
 import ChoiceQuestion from '../components/franchise/ChoiceQuestion';
 import EnquirySuccess from '../components/franchise/EnquirySuccess';
-import { submitFranchiseEnquiry } from '../services/franchiseService';
+import { submitFranchiseEnquiry, getFranchiseIntegrationStatus } from '../services/franchiseService';
 
 const DRAFT_STORAGE_KEY = 'coolcane_franchise_draft';
 
@@ -47,6 +47,17 @@ const FranchiseEnquiryPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [integrationMode, setIntegrationMode] = useState('unknown');
+  const [submissionResult, setSubmissionResult] = useState(null);
+
+  // Fetch integration status to detect demo vs live mode
+  useEffect(() => {
+    getFranchiseIntegrationStatus()
+      .then((res) => {
+        if (res && res.mode) setIntegrationMode(res.mode);
+      })
+      .catch(() => {});
+  }, []);
 
   // Sync draft to sessionStorage
   useEffect(() => {
@@ -147,6 +158,7 @@ const FranchiseEnquiryPage = () => {
 
   const handleFinalSubmit = async () => {
     if (!validateStep(6)) return;
+    if (isSubmitting) return; // Prevent duplicate clicks
 
     setIsSubmitting(true);
     setSubmitError('');
@@ -161,8 +173,9 @@ const FranchiseEnquiryPage = () => {
     };
 
     try {
-      await submitFranchiseEnquiry(submissionData);
+      const result = await submitFranchiseEnquiry(submissionData);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      setSubmissionResult(result);
       setIsSubmitted(true);
     } catch (err) {
       setSubmitError(err.message || 'Submission failed. Please try again.');
@@ -214,6 +227,17 @@ const FranchiseEnquiryPage = () => {
       <main className="flex-1 flex flex-col justify-center px-4 py-6 sm:py-12 relative z-10 w-full overflow-x-hidden">
         {!isSubmitted ? (
           <div className="w-full max-w-2xl mx-auto px-1 sm:px-0">
+            {/* Demo Mode Notice Banner during Development */}
+            {integrationMode === 'demo' && (
+              <div className="w-full max-w-xl mx-auto mb-4 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono flex items-center justify-between shadow-sm">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span>DEMO MODE: Submissions are simulated. CRM credentials not active.</span>
+                </span>
+                <span className="text-[10px] opacity-75 hidden sm:inline uppercase tracking-wider font-bold text-amber-400">Dev Mode</span>
+              </div>
+            )}
+
             {/* Progress Bar */}
             <ProgressIndicator currentStep={currentStep} totalSteps={6} />
 
@@ -376,15 +400,29 @@ const FranchiseEnquiryPage = () => {
               </div>
 
               {submitError && (
-                <p className="text-red-400 text-sm font-sans text-center font-medium pt-3">
-                  {submitError}
-                </p>
+                <div className="pt-3 text-center space-y-2">
+                  <p className="text-red-400 text-sm font-sans font-medium">
+                    {submitError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleFinalSubmit}
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-syne font-bold text-accent bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-all cursor-pointer"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Retry Submission</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
         ) : (
           <EnquirySuccess
             fullName={formData.fullName}
+            submissionResult={submissionResult}
             onVisitWebsite={() => navigate('/')}
           />
         )}

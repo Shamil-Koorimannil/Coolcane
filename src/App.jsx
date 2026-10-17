@@ -22,7 +22,7 @@ function ScrollToTop() {
 function App() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const isEnquiryPage = location.pathname === '/franchise-enquiry';
+  const isEnquiryPage = location.pathname.startsWith('/franchise-enquiry');
 
   return (
     <>

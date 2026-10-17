@@ -1,58 +1,61 @@
-// Service for handling franchise enquiry submission to Google Sheets / CRM
-const formatCustomDate = (date = new Date()) => {
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
+/**
+ * Client service for CoolCane Franchise Enquiry submission.
+ * Communicates with server-side endpoint (/api/franchise-enquiry) which securely
+ * manages Getlead CRM integration, lead priority classification, and demo mode.
+ */
 
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const strHours = String(hours).padStart(2, '0');
-
-  return `${day}/${month}/${year}, ${strHours}:${minutes}:${seconds} ${ampm}`;
+export const getFranchiseIntegrationStatus = async () => {
+  try {
+    const res = await fetch('/api/status', {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    if (!res.ok) return { mode: 'live' };
+    return await res.json();
+  } catch {
+    return { mode: 'live' };
+  }
 };
 
 export const submitFranchiseEnquiry = async (enquiryData) => {
-  let SCRIPT_URL =
-    import.meta.env.VITE_FRANCHISE_SUBMIT_URL ||
-    import.meta.env.VITE_API_URL ||
-    'https://script.google.com/macros/s/AKfycbzrqv5SGVW4D4zM6YfpbZvSSCjtKTFEALQFUDlu1QbDJsSIC89-Qj_S0kNt5g7Zmk19wQ/exec';
-
-  // Sanitize URL protocol typos (e.g. hhttps:// -> https://)
-  SCRIPT_URL = SCRIPT_URL.trim().replace(/^h+ttps:\/\//i, 'https://').replace(/^h+ttp:\/\//i, 'http://');
-
-  // Format Investment to just "Yes" or "No"
-  const rawInvestment = enquiryData.investmentReadiness || '';
-  const investmentValue = rawInvestment.toLowerCase().includes('yes') ? 'Yes' : 'No';
-
-  // Payload appended in exact requested column order:
-  // SubmittedAt | Name | CountryCode | Phone | Occupation | Franchise Location | OpeningTimeline | Investment | PageSource
-  const formData = new FormData();
-  formData.append('SubmittedAt', formatCustomDate());
-  formData.append('Name', enquiryData.fullName ? enquiryData.fullName.trim() : '');
-  formData.append('CountryCode', enquiryData.countryCode || '+91');
-  formData.append('Phone', enquiryData.phoneNumber ? enquiryData.phoneNumber.trim() : '');
-  formData.append('Occupation', enquiryData.occupation || '');
-  formData.append('Franchise Location', enquiryData.preferredLocation ? enquiryData.preferredLocation.trim() : '');
-  formData.append('OpeningTimeline', enquiryData.openingTimeline || '');
-  formData.append('Investment', investmentValue);
-  formData.append('PageSource', '/franchise-enquiry');
-
-  console.log('Submitting franchise enquiry to URL:', SCRIPT_URL);
+  const payload = {
+    fullName: enquiryData.fullName ? enquiryData.fullName.trim() : '',
+    phoneNumber: enquiryData.phoneNumber ? enquiryData.phoneNumber.trim() : '',
+    countryCode: enquiryData.countryCode || '+91',
+    occupation: enquiryData.occupation || '',
+    preferredLocation: enquiryData.preferredLocation ? enquiryData.preferredLocation.trim() : '',
+    openingTimeline: enquiryData.openingTimeline || '',
+    investmentReadiness: enquiryData.investmentReadiness || '',
+  };
 
   try {
-    await fetch(SCRIPT_URL, {
+    const response = await fetch('/api/franchise-enquiry', {
       method: 'POST',
-      mode: 'no-cors',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
 
-    return { success: true };
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.success) {
+      const errorMessage =
+        data.error ||
+        `Submission failed (HTTP ${response.status}). Please check your connection and try again.`;
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.isDuplicate = Boolean(data.isDuplicate);
+      error.isRetryable = data.isRetryable !== false;
+      throw error;
+    }
+
+    return data;
   } catch (error) {
-    console.error('Error submitting franchise enquiry to Google Sheets:', error);
-    throw new Error(error?.message || 'Failed to submit enquiry. Please check your network connection and try again.');
+    console.error('Error submitting franchise enquiry:', error);
+    throw error;
   }
 };
