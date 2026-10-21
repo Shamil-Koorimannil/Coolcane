@@ -41,6 +41,7 @@ const InitialLoader = ({ onComplete }) => {
     return () => {
       clearTimeout(safetyTimeout);
       window.removeEventListener('hero-frames-progress', handleProgress);
+      document.body.style.overflow = 'auto';
     };
   }, []);
 
