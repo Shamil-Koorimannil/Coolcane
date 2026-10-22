@@ -4,6 +4,13 @@ This guide contains the production Google Apps Script code and deployment instru
 
 ---
 
+## Active Deployed Web App Info
+
+- **Web App URL**: `https://script.google.com/macros/s/AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d/exec`
+- **Deployment ID**: `AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d`
+
+---
+
 ## Production Google Apps Script Code
 
 Copy and paste this exact script into your Google Sheet's Apps Script editor (**Extensions** > **Apps Script**):

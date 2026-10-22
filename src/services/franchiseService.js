@@ -4,7 +4,7 @@
  */
 
 const DEFAULT_GOOGLE_SHEETS_URL =
-  'https://script.google.com/macros/s/AKfycbzrqv5SGVW4D4zM6YfpbZvSSCjtKTFEALQFUDlu1QbDJsSIC89-Qj_S0kNt5g7Zmk19wQ/exec';
+  'https://script.google.com/macros/s/AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d/exec';
 
 /**
  * Format custom human-readable date & time in IST (Indian Standard Time).

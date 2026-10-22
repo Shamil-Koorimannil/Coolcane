@@ -2,7 +2,7 @@ import { classifyLeadPriority } from './lib/leadPriority.js';
 
 // Default Google Apps Script Web App URL for CoolCane Google Sheet
 const DEFAULT_GOOGLE_SHEETS_URL =
-  'https://script.google.com/macros/s/AKfycbzrqv5SGVW4D4zM6YfpbZvSSCjtKTFEALQFUDlu1QbDJsSIC89-Qj_S0kNt5g7Zmk19wQ/exec';
+  'https://script.google.com/macros/s/AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d/exec';
 
 // Simple in-memory rate-limiter / deduplication store (phone + timestamp)
 const recentSubmissions = new Map();
