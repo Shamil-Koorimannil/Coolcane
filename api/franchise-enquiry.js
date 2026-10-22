@@ -1,9 +1,12 @@
 import { classifyLeadPriority } from './lib/leadPriority.js';
-import { getIntegrationStatus, submitLeadToGetlead, buildLeadNotes } from './lib/getleadClient.js';
+
+// Default Google Apps Script Web App URL for CoolCane Google Sheet
+const DEFAULT_GOOGLE_SHEETS_URL =
+  'https://script.google.com/macros/s/AKfycbzrqv5SGVW4D4zM6YfpbZvSSCjtKTFEALQFUDlu1QbDJsSIC89-Qj_S0kNt5g7Zmk19wQ/exec';
 
 // Simple in-memory rate-limiter / deduplication store (phone + timestamp)
 const recentSubmissions = new Map();
-const DEDUPLICATION_WINDOW_MS = 6000; // 6 seconds debounce per phone number
+const DEDUPLICATION_WINDOW_MS = 5000; // 5 seconds debounce per phone number
 
 // Cleanup old entries periodically
 setInterval(() => {
@@ -16,7 +19,40 @@ setInterval(() => {
 }, 30000).unref?.();
 
 /**
- * Helper to safely extract JSON body across Vercel serverless and Node connect middleware.
+ * Format custom human-readable date & time in IST (Indian Standard Time).
+ * Example: 22/10/2026, 01:15:30 PM
+ */
+function formatCustomDate(date = new Date()) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }).format(date);
+  } catch {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strHours = String(hours).padStart(2, '0');
+
+    return `${day}/${month}/${year}, ${strHours}:${minutes}:${seconds} ${ampm}`;
+  }
+}
+
+/**
+ * Helper to safely extract JSON body across Vercel serverless, Express, and Node connect middleware.
  */
 async function parseRequestBody(req) {
   if (req.body && typeof req.body === 'object') {
@@ -56,14 +92,17 @@ async function parseRequestBody(req) {
 }
 
 function sendResponse(res, statusCode, data) {
+  if (res.setHeader) {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  }
   if (res.status && res.json) {
     return res.status(statusCode).json(data);
   }
   res.statusCode = statusCode;
-  if (res.setHeader) {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-store');
-  }
   res.end(JSON.stringify(data));
 }
 
@@ -83,7 +122,7 @@ function validateEnquiryPayload(data) {
   const phoneNumber = typeof data.phoneNumber === 'string' ? data.phoneNumber.trim() : '';
   const digitsOnly = phoneNumber.replace(/\D/g, '');
   if (!phoneNumber || digitsOnly.length < 7 || digitsOnly.length > 15) {
-    errors.push('A valid international contact number is required.');
+    errors.push('A valid contact number is required.');
   }
 
   // 3. Occupation
@@ -100,22 +139,8 @@ function validateEnquiryPayload(data) {
 
   // 5. Opening Timeline
   const openingTimeline = typeof data.openingTimeline === 'string' ? data.openingTimeline.trim() : '';
-  const validTimelines = [
-    'Within 2 months',
-    'Within 6 months',
-    'Within 1 year',
-    'More than 1 year',
-    'Just exploring opportunities'
-  ];
   if (!openingTimeline) {
     errors.push('Launch timeline selection is required.');
-  } else if (!validTimelines.includes(openingTimeline)) {
-    // If not exact match, verify it can still be classified
-    try {
-      classifyLeadPriority(openingTimeline);
-    } catch {
-      errors.push(`Invalid timeline option: "${openingTimeline}".`);
-    }
   }
 
   // 6. Investment Readiness
@@ -134,19 +159,83 @@ function validateEnquiryPayload(data) {
       occupation,
       preferredLocation,
       openingTimeline,
-      investmentReadiness
-    }
+      investmentReadiness,
+    },
   };
+}
+
+/**
+ * Send franchise enquiry row to Google Sheets via Google Apps Script Web App.
+ */
+async function appendLeadToGoogleSheets(payload) {
+  const targetUrl = (
+    process.env.GOOGLE_SHEETS_URL ||
+    process.env.VITE_GOOGLE_SHEETS_URL ||
+    process.env.VITE_FRANCHISE_SUBMIT_URL ||
+    DEFAULT_GOOGLE_SHEETS_URL
+  )
+    .trim()
+    .replace(/^h+ttps:\/\//i, 'https://')
+    .replace(/^h+ttp:\/\//i, 'http://');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const formData = new URLSearchParams();
+    for (const [key, value] of Object.entries(payload)) {
+      formData.append(key, value !== undefined && value !== null ? String(value) : '');
+    }
+
+    const response = await fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: formData.toString(),
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const responseText = await response.text().catch(() => '');
+    let parsedJson = null;
+    try {
+      parsedJson = JSON.parse(responseText);
+    } catch {
+      // Non-JSON response (standard with some Apps Script deployments)
+    }
+
+    if (response.ok || (parsedJson && parsedJson.status === 'success')) {
+      return { success: true, data: parsedJson || { status: 'success' } };
+    }
+
+    throw new Error(
+      `Google Sheets script returned HTTP ${response.status}: ${responseText.slice(0, 150)}`
+    );
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Google Sheets request timed out after 12 seconds');
+    }
+    throw error;
+  }
 }
 
 /**
  * Main serverless handler for /api/franchise-enquiry
  */
 export default async function handler(req, res) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return sendResponse(res, 204, {});
+  }
+
   if (req.method !== 'POST') {
     return sendResponse(res, 405, {
       success: false,
-      error: 'Method not allowed. Use POST.'
+      error: 'Method not allowed. Use POST.',
     });
   }
 
@@ -156,7 +245,7 @@ export default async function handler(req, res) {
   } catch (parseErr) {
     return sendResponse(res, 400, {
       success: false,
-      error: parseErr.message || 'Malformed JSON payload'
+      error: parseErr.message || 'Malformed JSON payload',
     });
   }
 
@@ -166,116 +255,89 @@ export default async function handler(req, res) {
     return sendResponse(res, 400, {
       success: false,
       error: validation.errors[0],
-      errors: validation.errors
+      errors: validation.errors,
     });
   }
 
-  const sanitizedData = validation.sanitized;
+  const sanitized = validation.sanitized;
 
   // Rapid duplicate submission prevention
-  const dedupKey = `${sanitizedData.phoneNumber}_${sanitizedData.openingTimeline}`;
+  const dedupKey = `${sanitized.phoneNumber}_${sanitized.openingTimeline}`;
   const now = Date.now();
   if (recentSubmissions.has(dedupKey) && now - recentSubmissions.get(dedupKey) < DEDUPLICATION_WINDOW_MS) {
     return sendResponse(res, 429, {
       success: false,
       isDuplicate: true,
-      error: 'Duplicate submission detected. Please wait a few seconds before submitting again.'
+      error: 'Duplicate submission detected. Please wait a few seconds before submitting again.',
     });
   }
   recentSubmissions.set(dedupKey, now);
 
-  // Server-side Priority Calculation
-  let priority;
+  // Calculate Lead Priority (HOT / WARM / COLD)
+  let priority = 'WARM';
   try {
-    priority = classifyLeadPriority(sanitizedData.openingTimeline);
-  } catch (err) {
-    return sendResponse(res, 400, {
-      success: false,
-      error: err.message
-    });
+    priority = classifyLeadPriority(sanitized.openingTimeline);
+  } catch {
+    priority = 'WARM';
   }
 
-  // Determine Integration Mode
-  const status = getIntegrationStatus();
+  // Format Investment to human-friendly summary
+  const investmentValue = sanitized.investmentReadiness.toLowerCase().includes('yes')
+    ? 'Yes (₹10 Lakhs)'
+    : 'No (< ₹10 Lakhs)';
 
-  // Scenario 1: Misconfigured production environment (Fail safely)
-  if (status.mode === 'misconfigured') {
-    console.error('[CRM ERROR] Misconfigured integration in production:', status.error);
-    return sendResponse(res, 503, {
-      success: false,
-      mode: 'misconfigured',
-      error: status.error || 'CRM service is not configured. Please contact the administrator.'
-    });
-  }
+  // Build full international phone format
+  const fullPhone = sanitized.phoneNumber.startsWith('+')
+    ? sanitized.phoneNumber
+    : `${sanitized.countryCode} ${sanitized.phoneNumber}`;
 
-  // Scenario 2: Development / Demo Mode (Simulate without sending to Getlead)
-  if (status.mode === 'demo') {
-    const simulatedNotes = buildLeadNotes({
-      priority,
-      occupation: sanitizedData.occupation,
-      preferredLocation: sanitizedData.preferredLocation,
-      openingTimeline: sanitizedData.openingTimeline,
-      investmentReadiness: sanitizedData.investmentReadiness
-    });
+  const timestamp = formatCustomDate();
 
-    console.log('\n--- [COOLCANE CRM DEMO MODE SUBMISSION] ---');
-    console.log('Priority Calculated:', priority);
-    console.log('Lead Details:', {
-      name: sanitizedData.fullName,
-      phone: sanitizedData.phoneNumber,
-      timeline: sanitizedData.openingTimeline,
-      investment: sanitizedData.investmentReadiness,
-      location: sanitizedData.preferredLocation,
-      occupation: sanitizedData.occupation
-    });
-    console.log('Simulated CRM Notes:\n' + simulatedNotes);
-    console.log('-------------------------------------------\n');
+  // Prepare full column payload for Google Sheets
+  const sheetsPayload = {
+    SubmittedAt: timestamp,
+    Name: sanitized.fullName,
+    fullName: sanitized.fullName,
+    CountryCode: sanitized.countryCode,
+    Phone: fullPhone,
+    phoneNumber: fullPhone,
+    Occupation: sanitized.occupation,
+    'Franchise Location': sanitized.preferredLocation,
+    Location: sanitized.preferredLocation,
+    preferredLocation: sanitized.preferredLocation,
+    OpeningTimeline: sanitized.openingTimeline,
+    openingTimeline: sanitized.openingTimeline,
+    Investment: investmentValue,
+    investmentReadiness: sanitized.investmentReadiness,
+    Priority: priority,
+    priority: priority,
+    PageSource: '/franchise-enquiry',
+  };
+
+  try {
+    await appendLeadToGoogleSheets(sheetsPayload);
 
     return sendResponse(res, 200, {
       success: true,
-      mode: 'demo',
+      message: 'Franchise enquiry successfully recorded in Google Sheets.',
       priority,
-      message:
-        'Franchise enquiry simulated successfully in Demo Mode. Lead data was NOT sent to Getlead CRM.',
-      simulatedLead: {
-        name: sanitizedData.fullName,
-        phone: sanitizedData.phoneNumber,
+      lead: {
+        name: sanitized.fullName,
+        phone: fullPhone,
+        location: sanitized.preferredLocation,
+        timeline: sanitized.openingTimeline,
+        investment: investmentValue,
         priority,
-        openingTimeline: sanitizedData.openingTimeline,
-        investmentReadiness: sanitizedData.investmentReadiness,
-        preferredLocation: sanitizedData.preferredLocation,
-        occupation: sanitizedData.occupation
-      }
+      },
     });
-  }
+  } catch (sheetsErr) {
+    console.error('[GOOGLE SHEETS SUBMISSION ERROR]:', sheetsErr.message);
 
-  // Scenario 3: Live Mode (Send to real Getlead CRM API)
-  try {
-    const crmResult = await submitLeadToGetlead({
-      apiKey: status.apiKey,
-      baseUrl: status.baseUrl,
-      enquiryData: sanitizedData,
-      priority
-    });
-
-    return sendResponse(res, 200, {
-      success: true,
-      mode: 'live',
-      priority,
-      message: 'Franchise enquiry successfully recorded in Getlead CRM.',
-      leadId: crmResult.data?.id || crmResult.data?.lead?.id || null
-    });
-  } catch (crmErr) {
-    console.error('[GETLEAD API ERROR]:', crmErr.message, crmErr.details || '');
-
-    const statusCode = crmErr.status && crmErr.status >= 400 && crmErr.status < 600 ? crmErr.status : 502;
-
-    return sendResponse(res, statusCode, {
+    return sendResponse(res, 502, {
       success: false,
-      mode: 'live',
-      priority,
-      isRetryable: crmErr.isRetryable !== false,
-      error: crmErr.message || 'Failed to submit enquiry to Getlead CRM. Please try again.'
+      isRetryable: true,
+      error: 'Failed to record enquiry to Google Sheets. Please check your connection and try again.',
+      details: sheetsErr.message,
     });
   }
 }

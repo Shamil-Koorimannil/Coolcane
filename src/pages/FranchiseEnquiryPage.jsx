@@ -9,7 +9,7 @@ import TextQuestion from '../components/franchise/TextQuestion';
 import PhoneQuestion from '../components/franchise/PhoneQuestion';
 import ChoiceQuestion from '../components/franchise/ChoiceQuestion';
 import EnquirySuccess from '../components/franchise/EnquirySuccess';
-import { submitFranchiseEnquiry, getFranchiseIntegrationStatus } from '../services/franchiseService';
+import { submitFranchiseEnquiry } from '../services/franchiseService';
 
 const DRAFT_STORAGE_KEY = 'coolcane_franchise_draft';
 
@@ -47,17 +47,7 @@ const FranchiseEnquiryPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [integrationMode, setIntegrationMode] = useState('unknown');
   const [submissionResult, setSubmissionResult] = useState(null);
-
-  // Fetch integration status to detect demo vs live mode
-  useEffect(() => {
-    getFranchiseIntegrationStatus()
-      .then((res) => {
-        if (res && res.mode) setIntegrationMode(res.mode);
-      })
-      .catch(() => {});
-  }, []);
 
   // Sync draft to sessionStorage
   useEffect(() => {
@@ -227,16 +217,6 @@ const FranchiseEnquiryPage = () => {
       <main className="flex-1 flex flex-col justify-center px-4 py-6 sm:py-12 relative z-10 w-full overflow-x-hidden">
         {!isSubmitted ? (
           <div className="w-full max-w-2xl mx-auto px-1 sm:px-0">
-            {/* Demo Mode Notice Banner during Development */}
-            {integrationMode === 'demo' && (
-              <div className="w-full max-w-xl mx-auto mb-4 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono flex items-center justify-between shadow-sm">
-                <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  <span>DEMO MODE: Submissions are simulated. CRM credentials not active.</span>
-                </span>
-                <span className="text-[10px] opacity-75 hidden sm:inline uppercase tracking-wider font-bold text-amber-400">Dev Mode</span>
-              </div>
-            )}
 
             {/* Progress Bar */}
             <ProgressIndicator currentStep={currentStep} totalSteps={6} />

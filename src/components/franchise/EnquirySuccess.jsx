@@ -69,21 +69,6 @@ const EnquirySuccess = ({ fullName, onVisitWebsite, submissionResult }) => {
         Thank you for your interest in becoming a CoolCane franchise partner. We have received your enquiry and our team will connect with you soon.
       </p>
 
-      {/* Demo Mode Notice (Active only during simulated development tests) */}
-      {submissionResult?.mode === 'demo' && (
-        <div className="w-full max-w-md mx-auto p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs font-mono text-left space-y-1.5 shadow-lg">
-          <div className="flex items-center gap-2 font-bold text-amber-400">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>DEVELOPMENT DEMO MODE SIMULATION</span>
-          </div>
-          <p className="text-[12px] text-amber-100">
-            Calculated Lead Priority: <span className="font-bold text-slate-950 px-2 py-0.5 rounded bg-accent">{submissionResult.priority}</span>
-          </p>
-          <p className="text-[11px] text-amber-300/80 pt-0.5 leading-relaxed">
-            Note: This enquiry was processed in Demo Mode and was <strong>NOT</strong> sent to Getlead CRM. To enable live submissions, configure your real <code className="text-white bg-black/40 px-1 py-0.5 rounded">GETLEAD_API_KEY</code>.
-          </p>
-        </div>
-      )}
 
       {/* Action Buttons */}
       <div className="w-full pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
