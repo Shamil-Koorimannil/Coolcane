@@ -8,7 +8,7 @@ const DEFAULT_GOOGLE_SHEETS_URL =
 
 /**
  * Format custom human-readable date & time in IST (Indian Standard Time).
- * Example: 22/10/2026, 01:15:30 PM
+ * Example: 22/10/2026, 17:41:17
  */
 export const formatCustomDate = (date = new Date()) => {
   try {
@@ -20,22 +20,18 @@ export const formatCustomDate = (date = new Date()) => {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true,
+      hour12: false,
     }).format(date);
   } catch {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
 
-    let hours = date.getHours();
+    const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    const strHours = String(hours).padStart(2, '0');
 
-    return `${day}/${month}/${year}, ${strHours}:${minutes}:${seconds} ${ampm}`;
+    return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
   }
 };
 
@@ -50,7 +46,10 @@ export const getLeadPriority = (timeline = '') => {
 };
 
 /**
- * Direct Google Sheets submission with automatic retry and timeout
+ * Direct Google Sheets submission with automatic retry and timeout.
+ * Dual-delivery ensures compatibility with Google Apps Script doPost(e):
+ * - URL query parameters populate e.parameter
+ * - text/plain JSON body populates e.postData.contents
  */
 export const submitFranchiseEnquiry = async (enquiryData, retryCount = 1) => {
   let scriptUrl =
@@ -63,48 +62,56 @@ export const submitFranchiseEnquiry = async (enquiryData, retryCount = 1) => {
 
   const fullName = enquiryData.fullName ? enquiryData.fullName.trim() : '';
   const rawPhone = enquiryData.phoneNumber ? enquiryData.phoneNumber.trim() : '';
-  const countryCode = enquiryData.countryCode || '+91';
-  const fullPhone = rawPhone.startsWith('+') ? rawPhone : `${countryCode} ${rawPhone}`;
-  const investment = enquiryData.investmentReadiness || '';
-  const investmentValue = investment.toLowerCase().includes('yes')
-    ? 'Yes (₹10 Lakhs)'
-    : 'No (< ₹10 Lakhs)';
+  const countryCode = (enquiryData.countryCode || '+91').replace(/\+/g, '').trim();
+  const digitsOnlyPhone = rawPhone.replace(/\D/g, '');
+  const cleanPhone = digitsOnlyPhone || rawPhone;
+
+  // Exact matching for user's doPost: "Yes" or "No"
+  const rawInvestment = enquiryData.investmentReadiness || '';
+  const investment = rawInvestment.toLowerCase().includes('yes') ? 'Yes' : 'No';
+
   const timeline = enquiryData.openingTimeline || '';
-  const priority = getLeadPriority(timeline);
   const location = enquiryData.preferredLocation ? enquiryData.preferredLocation.trim() : '';
   const formattedDate = formatCustomDate();
+  const priority = getLeadPriority(timeline);
 
-  // Prepare FormData for Google Apps Script
-  const formData = new FormData();
-  formData.append('SubmittedAt', formattedDate);
-  formData.append('Name', fullName);
-  formData.append('fullName', fullName);
-  formData.append('CountryCode', countryCode);
-  formData.append('Phone', fullPhone);
-  formData.append('phoneNumber', fullPhone);
-  formData.append('Occupation', enquiryData.occupation || '');
-  formData.append('Franchise Location', location);
-  formData.append('Location', location);
-  formData.append('preferredLocation', location);
-  formData.append('OpeningTimeline', timeline);
-  formData.append('openingTimeline', timeline);
-  formData.append('Investment', investmentValue);
-  formData.append('Minimum Investment Acknowledged', investmentValue);
-  formData.append('investmentReadiness', investment);
-  formData.append('Priority', priority);
-  formData.append('priority', priority);
-  formData.append('PageSource', '/franchise-enquiry');
+  // Payload with exact keys from user's doPost headers and fallback keys:
+  // SubmittedAt | Name | CountryCode | Phone | Occupation | Franchise Location | OpeningTimeline | Investment | PageSource
+  const payload = {
+    SubmittedAt: formattedDate,
+    Name: fullName,
+    fullName: fullName,
+    CountryCode: countryCode,
+    Phone: cleanPhone,
+    phoneNumber: cleanPhone,
+    Occupation: enquiryData.occupation || '',
+    'Franchise Location': location,
+    Location: location,
+    preferredLocation: location,
+    OpeningTimeline: timeline,
+    openingTimeline: timeline,
+    Investment: investment,
+    InvestmentReadiness: investment,
+    Priority: priority,
+    PageSource: '/franchise-enquiry',
+  };
+
+  // Construct URL with query parameters to populate e.parameter in Google Apps Script
+  const queryParams = new URLSearchParams(payload).toString();
+  const targetUrl = scriptUrl.includes('?') ? `${scriptUrl}&${queryParams}` : `${scriptUrl}?${queryParams}`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   try {
-    // Direct submission to Google Apps Script Web App
-    // Note: mode: 'no-cors' is required by browsers for cross-origin POST to Google Apps Script
-    await fetch(scriptUrl, {
+    // text/plain is CORS-safelisted so mode: 'no-cors' sends the JSON body cleanly to Google Apps Script
+    await fetch(targetUrl, {
       method: 'POST',
       mode: 'no-cors',
-      body: formData,
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
