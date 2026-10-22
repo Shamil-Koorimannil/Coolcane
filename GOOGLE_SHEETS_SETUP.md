@@ -8,6 +8,8 @@ This guide contains the production Google Apps Script code and deployment instru
 
 - **Web App URL**: `https://script.google.com/macros/s/AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d/exec`
 - **Deployment ID**: `AKfycbwtXjLrPXsKWRYId7O4tlumexXgUyeUD6W8zDJm-QMOpfisdcwPKIyK_fXTUDvu1P8d`
+- **Script ID**: `16KoMrfSfzXWMr8yLp8hS3LcEXK8dqyKr1Tp8WPpVVOTk4cjp-qAbZANW`
+- **Library URL**: `https://script.google.com/macros/library/d/16KoMrfSfzXWMr8yLp8hS3LcEXK8dqyKr1Tp8WPpVVOTk4cjp-qAbZANW/3`
 
 ---
 
